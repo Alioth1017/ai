@@ -1,41 +1,17 @@
-import {
-  OpenAIStream,
-  StreamingTextResponse,
-  experimental_StreamData,
-} from 'ai';
-import OpenAI from 'openai';
-
-import { APIEvent } from 'solid-start/api';
-
-// Create an OpenAI API client
-const openai = new OpenAI({
-  apiKey: process.env['OPENAI_API_KEY'] || '',
-});
+import { openai } from '@ai-sdk/openai';
+import { APIEvent } from '@solidjs/start/server';
+import { streamText } from 'ai';
 
 export const POST = async (event: APIEvent) => {
   // Extract the `prompt` from the body of the request
   const { prompt } = await event.request.json();
 
   // Ask OpenAI for a streaming chat completion given the prompt
-  const response = await openai.chat.completions.create({
-    model: 'gpt-3.5-turbo',
-    stream: true,
-    messages: [{ role: 'user', content: prompt }],
-  });
-
-  // optional: use stream data
-  const data = new experimental_StreamData();
-
-  data.append({ test: 'value' });
-
-  // Convert the response into a friendly text-stream
-  const stream = OpenAIStream(response, {
-    onFinal(completion) {
-      data.close();
-    },
-    experimental_streamData: true,
+  const result = streamText({
+    model: openai('gpt-4o'),
+    prompt,
   });
 
   // Respond with the stream
-  return new StreamingTextResponse(stream, {}, data);
+  return result.toDataStreamResponse();
 };
